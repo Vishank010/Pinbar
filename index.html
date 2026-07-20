@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pinboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='38' r='20' fill='%23C0392B'/%3E%3Crect x='47' y='55' width='6' height='30' fill='%235B4636'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --cork:#c19a5b;
+    --cork-dark:#a97f43;
+    --cork-line:#8a6534;
+    --wood:#3f2e22;
+    --wood-dark:#2c2018;
+    --paper:#faf6ec;
+    --paper-edge:#e7dfc7;
+    --ink:#2c2018;
+    --ink-soft:#6b5a45;
+    --pin-red:#c0392b;
+    --pin-blue:#2e5f8a;
+    --pin-green:#4a7c4e;
+    --pin-yellow:#c9992e;
+    --pin-purple:#6b4c8a;
+    --focus:#e8b23d;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:'Segoe UI', 'Noto Sans', sans-serif;
+    background:var(--wood);
+    color:var(--ink);
+    display:flex;
+    min-height:100vh;
+  }
+  h1,h2,h3{font-family:'Georgia','Noto Serif',serif;}
+
+  /* ---------- Sidebar (drawer of titles) ---------- */
+  .sidebar{
+    width:250px;
+    flex-shrink:0;
+    background:
+      linear-gradient(180deg, var(--wood) 0%, var(--wood-dark) 100%);
+    padding:22px 16px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    border-right:6px solid var(--wood-dark);
+  }
+  .brand{
+    color:#f2e6c9;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:0 4px;
+  }
+  .brand svg{flex-shrink:0;}
+  .brand h1{
+    font-size:1.35rem;
+    margin:0;
+    letter-spacing:.5px;
+    color:#f2e6c9;
+  }
+  .brand span{
+    display:block;
+    font-size:.72rem;
+    color:#b8a888;
+    font-family:'Segoe UI',sans-serif;
+    margin-top:2px;
+  }
+
+  .new-board-btn{
+    background:var(--pin-red);
+    color:#fff8ee;
+    border:none;
+    border-radius:6px;
+    padding:11px 14px;
+    font-size:.92rem;
+    font-weight:600;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    box-shadow:0 2px 0 #7a2117, 0 3px 6px rgba(0,0,0,.4);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .new-board-btn:hover{transform:translateY(-1px);}
+  .new-board-btn:active{transform:translateY(1px); box-shadow:0 1px 0 #7a2117;}
+  .new-board-btn:focus-visible{outline:3px solid var(--focus); outline-offset:2px;}
+
+  .board-list{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    overflow-y:auto;
+  }
+  .board-list li{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .board-btn{
+    flex:1;
+    text-align:left;
+    background:transparent;
+    border:none;
+    color:#e4d6b4;
+    padding:9px 10px;
+    border-radius:5px;
+    font-size:.92rem;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .board-btn:hover{background:rgba(255,255,255,.08);}
+  .board-btn.active{
+    background:var(--cork);
+    color:var(--wood-dark);
+    font-weight:700;
+  }
+  .board-btn .dot{
+    width:9px;height:9px;border-radius:50%;flex-shrink:0;
+  }
+  .board-btn:focus-visible{outline:3px solid var(--focus); outline-offset:1px;}
+
+  .del-board{
+    background:transparent;
+    border:none;
+    color:#8a7458;
+    cursor:pointer;
+    font-size:1rem;
+    padding:4px 6px;
+    border-radius:4px;
+    line-height:1;
+  }
+  .del-board:hover{color:var(--pin-red); background:rgba(255,255,255,.08);}
+
+  .sidebar-footer{
+    margin-top:auto;
+    font-size:.72rem;
+    color:#8a7458;
+    line-height:1.5;
+    padding:0 4px;
+  }
+
+  /* ---------- Main corkboard ---------- */
+  .board-area{
+    flex:1;
+    background:
+      radial-gradient(circle at 12% 18%, rgba(255,255,255,.05), transparent 40%),
+      repeating-radial-gradient(circle at 20% 30%, rgba(80,55,20,.10) 0, rgba(80,55,20,.10) 1px, transparent 2px, transparent 10px),
+      repeating-radial-gradient(circle at 70% 65%, rgba(80,55,20,.08) 0, rgba(80,55,20,.08) 1px, transparent 2px, transparent 12px),
+      linear-gradient(160deg, var(--cork) 0%, var(--cork-dark) 100%);
+    padding:32px 40px 60px;
+    overflow-y:auto;
+    position:relative;
+  }
+  .board-header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:26px;
+    border-bottom:3px dashed var(--cork-line);
+    padding-bottom:14px;
+  }
+  .board-header h2{
+    margin:0;
+    font-size:1.9rem;
+    color:#3a2711;
+    text-shadow:0 1px 0 rgba(255,255,255,.25);
+  }
+  .board-header .count{
+    font-size:.85rem;
+    color:#5c4423;
+    font-family:'Segoe UI',sans-serif;
+  }
+  .add-pin-btn{
+    background:var(--wood);
+    color:#f2e6c9;
+    border:none;
+    border-radius:6px;
+    padding:9px 16px;
+    font-size:.88rem;
+    font-weight:600;
+    cursor:pointer;
+    box-shadow:0 2px 0 #1c130c;
+  }
+  .add-pin-btn:hover{filter:brightness(1.15);}
+  .add-pin-btn:focus-visible{outline:3px solid var(--focus); outline-offset:2px;}
+
+  .pin-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+    gap:34px 28px;
+  }
+
+  .pin-card{
+    position:relative;
+    background:var(--paper);
+    border:1px solid var(--paper-edge);
+    padding:20px 16px 16px;
+    border-radius:2px;
+    box-shadow:0 10px 18px -6px rgba(0,0,0,.45), 0 2px 4px rgba(0,0,0,.2);
+    text-decoration:none;
+    color:var(--ink);
+    display:block;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .pin-card:nth-child(3n+1){transform:rotate(-2.2deg);}
+  .pin-card:nth-child(3n+2){transform:rotate(1.6deg);}
+  .pin-card:nth-child(3n+3){transform:rotate(-1deg);}
+  .pin-card:hover{
+    transform:rotate(0deg) translateY(-4px) scale(1.03);
+    box-shadow:0 16px 26px -6px rgba(0,0,0,.5), 0 3px 6px rgba(0,0,0,.25);
+    z-index:2;
+  }
+  .pin-card:focus-visible{outline:3px solid var(--focus); outline-offset:3px;}
+
+  .tack{
+    position:absolute;
+    top:-11px;
+    left:50%;
+    transform:translateX(-50%);
+    width:20px;height:20px;
+    border-radius:50%;
+    box-shadow:0 3px 4px rgba(0,0,0,.45), inset 0 -3px 4px rgba(0,0,0,.25), inset 0 2px 3px rgba(255,255,255,.4);
+  }
+
+  .pin-favicon{
+    width:34px;height:34px;
+    border-radius:6px;
+    background:#eee;
+    object-fit:cover;
+    margin-bottom:10px;
+    border:1px solid var(--paper-edge);
+  }
+  .pin-name{
+    font-family:'Georgia','Noto Serif',serif;
+    font-size:1.02rem;
+    font-weight:700;
+    margin:0 0 4px;
+    color:#2c2018;
+    word-break:break-word;
+  }
+  .pin-url{
+    font-size:.74rem;
+    color:var(--ink-soft);
+    word-break:break-all;
+    display:block;
+  }
+  .pin-remove{
+    position:absolute;
+    top:6px;
+    right:6px;
+    background:none;
+    border:none;
+    color:#b6a98a;
+    font-size:.95rem;
+    cursor:pointer;
+    line-height:1;
+    padding:4px;
+    border-radius:4px;
+  }
+  .pin-remove:hover{color:var(--pin-red);}
+
+  .empty-state{
+    text-align:center;
+    padding:60px 20px;
+    color:#5c4423;
+  }
+  .empty-state h3{margin:0 0 8px; font-size:1.3rem;}
+  .empty-state p{margin:0 0 18px; font-size:.9rem; color:#6b5535;}
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(20,14,8,.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    padding:16px;
+  }
+  .overlay.show{display:flex;}
+  .modal{
+    background:var(--paper);
+    border-radius:8px;
+    padding:26px 24px;
+    width:100%;
+    max-width:360px;
+    box-shadow:0 20px 40px rgba(0,0,0,.5);
+  }
+  .modal h3{margin:0 0 16px; font-size:1.15rem; color:var(--ink);}
+  .modal label{
+    display:block;
+    font-size:.78rem;
+    font-weight:600;
+    color:var(--ink-soft);
+    margin:12px 0 5px;
+    font-family:'Segoe UI',sans-serif;
+  }
+  .modal input{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid var(--paper-edge);
+    border-radius:5px;
+    font-size:.92rem;
+    background:#fff;
+    color:var(--ink);
+  }
+  .modal input:focus-visible{outline:3px solid var(--focus); outline-offset:1px;}
+  .modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+    margin-top:20px;
+  }
+  .modal-actions button{
+    border:none;
+    padding:9px 16px;
+    border-radius:6px;
+    font-size:.88rem;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .btn-cancel{background:transparent; color:var(--ink-soft);}
+  .btn-cancel:hover{background:rgba(0,0,0,.06);}
+  .btn-confirm{background:var(--pin-red); color:#fff8ee;}
+  .btn-confirm:hover{filter:brightness(1.08);}
+  .btn-cancel:focus-visible, .btn-confirm:focus-visible{outline:3px solid var(--focus); outline-offset:2px;}
+
+  @media (max-width:640px){
+    body{flex-direction:column;}
+    .sidebar{width:100%; border-right:none; border-bottom:6px solid var(--wood-dark); max-height:220px;}
+    .board-area{padding:24px 18px 40px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 100 100"><circle cx="50" cy="38" r="20" fill="#c0392b"/><rect x="47" y="55" width="6" height="30" fill="#f2e6c9"/></svg>
+      <div>
+        <h1>Pinboard</h1>
+        <span>apni website ki chaabi</span>
+      </div>
+    </div>
+
+    <button class="new-board-btn" id="newBoardBtn">
+      <span style="font-size:1.1rem;">+</span> Naya Title Banao
+    </button>
+
+    <ul class="board-list" id="boardList"></ul>
+
+    <div class="sidebar-footer">
+      Sab kuch is browser ki memory mein save hota hai.
+    </div>
+  </aside>
+
+  <main class="board-area">
+    <div class="board-header">
+      <h2 id="boardTitle">—</h2>
+      <span class="count" id="boardCount"></span>
+      <button class="add-pin-btn" id="addPinBtn">📌 Website Pin Karo</button>
+    </div>
+
+    <div class="pin-grid" id="pinGrid"></div>
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <h3>Yeh board khaali hai</h3>
+      <p>Upar "Website Pin Karo" dabao aur pehli site jodo.</p>
+    </div>
+  </main>
+
+  <!-- New board modal -->
+  <div class="overlay" id="boardOverlay">
+    <div class="modal">
+      <h3>Naya Title</h3>
+      <label for="boardTitleInput">Title ka naam</label>
+      <input id="boardTitleInput" type="text" placeholder="jaise: Padhai, Kaam, Shopping" maxlength="40">
+      <div class="modal-actions">
+        <button class="btn-cancel" id="boardCancel">Cancel</button>
+        <button class="btn-confirm" id="boardConfirm">Banao</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New pin modal -->
+  <div class="overlay" id="pinOverlay">
+    <div class="modal">
+      <h3>Website Pin Karo</h3>
+      <label for="pinNameInput">Naam</label>
+      <input id="pinNameInput" type="text" placeholder="jaise: YouTube" maxlength="40">
+      <label for="pinUrlInput">Website Link (URL)</label>
+      <input id="pinUrlInput" type="text" placeholder="https://example.com">
+      <div class="modal-actions">
+        <button class="btn-cancel" id="pinCancel">Cancel</button>
+        <button class="btn-confirm" id="pinConfirm">Pin Karo</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+
+  const STORAGE_KEY = "pinboard_data_v1";
+  const pinColors = ["var(--pin-red)","var(--pin-blue)","var(--pin-green)","var(--pin-yellow)","var(--pin-purple)"];
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return null;
+      return JSON.parse(raw);
+    }catch(e){ return null; }
+  }
+  function save(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+  function uid(){
+    return Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  }
+
+  let state = load();
+  if(!state || !Array.isArray(state.boards) || state.boards.length === 0){
+    const firstBoard = { id: uid(), title: "Mera Pehla Board", pins: [] };
+    state = { boards: [firstBoard], activeId: firstBoard.id };
+    save();
+  }
+  if(!state.activeId || !state.boards.find(b => b.id === state.activeId)){
+    state.activeId = state.boards[0].id;
+  }
+
+  const boardList   = document.getElementById("boardList");
+  const boardTitle  = document.getElementById("boardTitle");
+  const boardCount  = document.getElementById("boardCount");
+  const pinGrid     = document.getElementById("pinGrid");
+  const emptyState  = document.getElementById("emptyState");
+
+  const newBoardBtn   = document.getElementById("newBoardBtn");
+  const boardOverlay  = document.getElementById("boardOverlay");
+  const boardTitleInp = document.getElementById("boardTitleInput");
+  const boardCancel   = document.getElementById("boardCancel");
+  const boardConfirm  = document.getElementById("boardConfirm");
+
+  const addPinBtn   = document.getElementById("addPinBtn");
+  const pinOverlay  = document.getElementById("pinOverlay");
+  const pinNameInp  = document.getElementById("pinNameInput");
+  const pinUrlInp   = document.getElementById("pinUrlInput");
+  const pinCancel   = document.getElementById("pinCancel");
+  const pinConfirm  = document.getElementById("pinConfirm");
+
+  function activeBoard(){
+    return state.boards.find(b => b.id === state.activeId);
+  }
+
+  function normalizeUrl(url){
+    url = url.trim();
+    if(!url) return "";
+    if(!/^https?:\/\//i.test(url)){
+      url = "https://" + url;
+    }
+    return url;
+  }
+
+  function faviconFor(url){
+    try{
+      const host = new URL(url).hostname;
+      return "https://www.google.com/s2/favicons?domain=" + host + "&sz=64";
+    }catch(e){
+      return "";
+    }
+  }
+
+  function renderBoards(){
+    boardList.innerHTML = "";
+    state.boards.forEach((b, i) => {
+      const li = document.createElement("li");
+
+      const btn = document.createElement("button");
+      btn.className = "board-btn" + (b.id === state.activeId ? " active" : "");
+      btn.setAttribute("aria-current", b.id === state.activeId ? "true" : "false");
+
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = pinColors[i % pinColors.length];
+      btn.appendChild(dot);
+
+      const label = document.createElement("span");
+      label.textContent = b.title;
+      btn.appendChild(label);
+
+      btn.addEventListener("click", () => {
+        state.activeId = b.id;
+        save();
+        renderAll();
+      });
+
+      li.appendChild(btn);
+
+      if(state.boards.length > 1){
+        const del = document.createElement("button");
+        del.className = "del-board";
+        del.title = "Board hatao";
+        del.setAttribute("aria-label", "Board hatao: " + b.title);
+        del.textContent = "✕";
+        del.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if(confirm('"' + b.title + '" board aur uske sabhi pins hata dein?')){
+            state.boards = state.boards.filter(x => x.id !== b.id);
+            if(state.activeId === b.id){
+              state.activeId = state.boards[0].id;
+            }
+            save();
+            renderAll();
+          }
+        });
+        li.appendChild(del);
+      }
+
+      boardList.appendChild(li);
+    });
+  }
+
+  function renderPins(){
+    const board = activeBoard();
+    boardTitle.textContent = board.title;
+    boardCount.textContent = board.pins.length + (board.pins.length === 1 ? " site pinned" : " sites pinned");
+
+    pinGrid.innerHTML = "";
+
+    if(board.pins.length === 0){
+      emptyState.style.display = "block";
+      pinGrid.style.display = "none";
+      return;
+    }
+    emptyState.style.display = "none";
+    pinGrid.style.display = "grid";
+
+    board.pins.forEach((p, i) => {
+      const a = document.createElement("a");
+      a.className = "pin-card";
+      a.href = p.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+
+      const tack = document.createElement("span");
+      tack.className = "tack";
+      tack.style.background = pinColors[i % pinColors.length];
+      a.appendChild(tack);
+
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "pin-remove";
+      removeBtn.textContent = "✕";
+      removeBtn.title = "Pin hatao";
+      removeBtn.setAttribute("aria-label", "Pin hatao: " + p.name);
+      removeBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        board.pins = board.pins.filter(x => x.id !== p.id);
+        save();
+        renderPins();
+      });
+      a.appendChild(removeBtn);
+
+      const img = document.createElement("img");
+      img.className = "pin-favicon";
+      img.src = p.favicon || "";
+      img.alt = "";
+      img.onerror = function(){ this.style.visibility = "hidden"; };
+      a.appendChild(img);
+
+      const name = document.createElement("p");
+      name.className = "pin-name";
+      name.textContent = p.name;
+      a.appendChild(name);
+
+      const url = document.createElement("span");
+      url.className = "pin-url";
+      url.textContent = p.url.replace(/^https?:\/\//, "");
+      a.appendChild(url);
+
+      pinGrid.appendChild(a);
+    });
+  }
+
+  function renderAll(){
+    renderBoards();
+    renderPins();
+  }
+
+  // ---- New board modal ----
+  function openBoardModal(){
+    boardTitleInp.value = "";
+    boardOverlay.classList.add("show");
+    setTimeout(() => boardTitleInp.focus(), 50);
+  }
+  function closeBoardModal(){
+    boardOverlay.classList.remove("show");
+  }
+  newBoardBtn.addEventListener("click", openBoardModal);
+  boardCancel.addEventListener("click", closeBoardModal);
+  boardOverlay.addEventListener("click", (e) => { if(e.target === boardOverlay) closeBoardModal(); });
+  boardConfirm.addEventListener("click", () => {
+    const title = boardTitleInp.value.trim();
+    if(!title){ boardTitleInp.focus(); return; }
+    const newBoard = { id: uid(), title: title, pins: [] };
+    state.boards.push(newBoard);
+    state.activeId = newBoard.id;
+    save();
+    renderAll();
+    closeBoardModal();
+  });
+  boardTitleInp.addEventListener("keydown", (e) => { if(e.key === "Enter") boardConfirm.click(); });
+
+  // ---- New pin modal ----
+  function openPinModal(){
+    pinNameInp.value = "";
+    pinUrlInp.value = "";
+    pinOverlay.classList.add("show");
+    setTimeout(() => pinNameInp.focus(), 50);
+  }
+  function closePinModal(){
+    pinOverlay.classList.remove("show");
+  }
+  addPinBtn.addEventListener("click", openPinModal);
+  pinCancel.addEventListener("click", closePinModal);
+  pinOverlay.addEventListener("click", (e) => { if(e.target === pinOverlay) closePinModal(); });
+  pinConfirm.addEventListener("click", () => {
+    const name = pinNameInp.value.trim();
+    let url = normalizeUrl(pinUrlInp.value);
+    if(!name){ pinNameInp.focus(); return; }
+    if(!url){ pinUrlInp.focus(); return; }
+    const board = activeBoard();
+    board.pins.push({ id: uid(), name: name, url: url, favicon: faviconFor(url) });
+    save();
+    renderPins();
+    closePinModal();
+  });
+  pinUrlInp.addEventListener("keydown", (e) => { if(e.key === "Enter") pinConfirm.click(); });
+  pinNameInp.addEventListener("keydown", (e) => { if(e.key === "Enter") pinUrlInp.focus(); });
+
+  document.addEventListener("keydown", (e) => {
+    if(e.key === "Escape"){ closeBoardModal(); closePinModal(); }
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
